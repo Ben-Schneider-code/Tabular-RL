@@ -13,38 +13,87 @@ public class A3 {
 
     static Random random = new Random();
     private static Problem problem;
+    private static LinkedList<Query> queries;
 
+    private static LinkedList<cachedQuery>  cachedQGrid;
+    private static LinkedList<cachedQuery>  cachedMDPGrid;
 
 
     public static void main(String args[]) {
 
 
         problem = getGridProblem(args[0]);
-        LinkedList<Query> queries = getQueries(args[1]);
+        queries = getQueries(args[1]);
+
+        cachedQGrid = new LinkedList<>();
+        cachedMDPGrid = new LinkedList<>();
+
+
+        /**
+         * Solve MDP and Q-Learning
+         * **/
+
 
         solveMDP();
-        System.out.println("\n");
         solveQLearning();
+        /**
+         * Answer Queries
+         * **/
+
+        System.out.println("\nPrinting query results\n\n");
+        printQueryResults();
+
+    }
+
+    public static void printQueryResults(){
+        for(var q : cachedMDPGrid)
+            printQueryAnswers(q);
+
+        for(var q : cachedQGrid)
+            printQueryAnswers(q);
+    }
+
+    public static void cacheQGridForQuery(int iteration, QTile[][] grid){
+
+        for (var query : queries){
+            if(query.method.equals("RL") && query.steps == iteration){
+                System.out.println("Board " +  iteration + " was cached for RL" );
+                cachedQGrid.add(new cachedQuery(query, null, grid));
+            }
+        }
+
+    }
+
+    public static void cacheMDPGridForQuery(int iteration, MDPTile[][] grid){
+        for (var query : queries){
+            if(query.method.equals("MDP") && query.steps == iteration){
+                System.out.println("Board " +  iteration + " was cached for MDP" );
+                cachedMDPGrid.add(new cachedQuery(query, grid, null));
+            }
+        }
     }
 
     public static void solveQLearning(){
         var grid = constructQLearning();
 
         for(int i = 0; i < problem.episodes; i++) {
-            grid = runQLearningEpisode(grid);
+            grid = updateQLearning(grid);
+            cacheQGridForQuery(i, grid);
         }
+
+        System.out.println("\n-----  Q-LEARNING SOLUTION  -----\n");
         printTableWide(grid);
     }
 
-    public static QTile[][] runQLearningEpisode(QTile[][] oldGrid){
+    public static QTile[][] updateQLearning(QTile[][] oldGrid){
 
         var grid = cpyQGrid(oldGrid);
         var currentState = grid[problem.startState[0]][problem.startState[1]];
 
         while(!currentState.isTerminal){
-            var action = getAction(currentState, grid);
+            var action = getPolicy(currentState, grid);
             var newState = transition(action, new int[]{currentState.row, currentState.col}, grid);
-            var currValue = currValue(currentState, action);
+            var currValue = getQValue(currentState, action);
 
             var sample = newState.reward + problem.discount*newState.value();
             var newValue = (1-problem.alpha)*currValue + problem.alpha*sample;
@@ -68,7 +117,7 @@ public class A3 {
             tile.north = value;
     }
 
-    public static double currValue(QTile tile, Direction dir){
+    public static double getQValue(QTile tile, Direction dir){
         if(dir == Direction.WEST)
             return tile.west;
         else if(dir == Direction.EAST)
@@ -95,14 +144,14 @@ public class A3 {
 
     }
 
-    public static Direction getAction(QTile currentState, QTile[][] grid){
+    public static Direction getPolicy(QTile currentState, QTile[][] grid){
         var epsilon = .2;
         var r = random.nextDouble();
 
         if(r < epsilon)
             return randomMove();
 
-        return currentState.bestAction();
+        return currentState.getAction();
     }
 
     public static Direction randomMove(){
@@ -228,11 +277,12 @@ public class A3 {
     public static void solveMDP(){
         var grid = constructMDP();
 
-        for(int i = 0; i < problem.k; i++)
+        for(int i = 0; i < problem.k; i++) {
             grid = iterateGrid(grid);
+            cacheMDPGridForQuery(i, grid);
+        }
 
-
-        System.out.print("\n");
+        System.out.println("\n-----  MDP SOLUTION  -----\n");
         printTable(grid);
 
     }
@@ -243,15 +293,15 @@ public class A3 {
         for(int i = 0; i < problem.vertical; i++)
             for(int j = 0; j < problem.horizontal; j++)
                 if(!newGrid[i][j].isBoulder && !newGrid[i][j].isTerminal){
-                    newGrid[i][j].value = computeActionFromValues(new int[]{i,j}, oldGrid);
+                    newGrid[i][j].value = computeActionFromValues(new int[]{i,j}, oldGrid).value;
                 }
         return newGrid;
     }
 
-    public static double computeActionFromValues(int[] location, MDPTile[][] grid){
+    public static tuple computeActionFromValues(int[] location, MDPTile[][] grid){
         double value = Double.NEGATIVE_INFINITY;
-        Direction action;
-
+        Direction action = Direction.NORTH;
+        //Take the max value over all actions
         for(var dir : Direction.values()){
             var moveValue = valueOfMove(location, grid, dir);
             if(moveValue > value){
@@ -259,8 +309,12 @@ public class A3 {
                 action = dir;
             }
         }
-        return value;
+
+
+        var tup = new tuple(action,value);
+        return tup;
     }
+
 
     public static double valueOfMove(int[] location, MDPTile[][] grid, Direction direction){
         double value = 0;
@@ -534,6 +588,26 @@ public class A3 {
         return queries;
     }
 
+    public static void printQueryAnswers(cachedQuery cachedQuery){
+        if( cachedQuery.query.method.equals("MDP")) {
+            if (cachedQuery.query.query.equals("stateValue")) {
+                System.out.println(cachedQuery.query + " : " + cachedQuery.mdpgrid[cachedQuery.query.row][cachedQuery.query.column].value);
+            }
+            else if (cachedQuery.query.query.equals("bestPolicy")) {
+                //Compute policy from value using 1 step of minimax
+                System.out.println(cachedQuery.query + " : " + computeActionFromValues(new int[]{cachedQuery.query.row,cachedQuery.query.row}, cachedQuery.mdpgrid).action);
+            }
+
+        }else{
+            if (cachedQuery.query.query.equals("bestQValue")) {
+                System.out.println(cachedQuery.query + " : " + cachedQuery.qgrid[cachedQuery.query.row][cachedQuery.query.column].value());
+            }
+            else if (cachedQuery.query.query.equals("bestPolicy")) {
+                System.out.println(cachedQuery.query + " : " +cachedQuery.qgrid[cachedQuery.query.row][cachedQuery.query.column].getAction());
+            }
+
+        }
+    }
 
 }
 
@@ -595,7 +669,7 @@ class QTile{
         return val;
     }
 
-    public Direction bestAction(){
+    public Direction getAction(){
         var actionList = new LinkedList<Direction>();
 
         actionList.add(Direction.NORTH);
@@ -754,9 +828,37 @@ class Query {
     }
 
     public String toString(){
-        return column + " " + row + " " + steps + " " + method + " " + query;
+        return column + ", " + row + ", " + steps + ", " + method + ", " + query;
     }
 
+}
+
+class cachedQuery {
+    public QTile[][] qgrid;
+    public MDPTile[][] mdpgrid;
+    public Query query;
+
+    public cachedQuery(Query q, MDPTile[][] mdpgrid, QTile[][] qgrid){
+        this.qgrid = qgrid;
+        this.mdpgrid = mdpgrid;
+        query = q;
+    }
+
+
+}
+
+class tuple{
+    Direction action;
+    double value;
+
+    public tuple(Direction action, double value){
+        this.action = action;
+        this.value = value;
+    }
+
+    public String toString(){
+        return "Direction : " + action + "  value: " + value;
+    }
 }
 
 enum Direction {
