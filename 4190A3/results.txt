@@ -1,7 +1,7 @@
-2,4,78,MDP,stateValue
+2,1,78,MDP,stateValue
 
-2,4,78,MDP,bestPolicy
+2,1,78,MDP,bestPolicy
 
-1,4,3000,RL,bestQValue
+1,1,3000,RL,bestQValue
 
-1,4,3000,RL,bestPolicy
+1,1,3000,RL,bestPolicy
