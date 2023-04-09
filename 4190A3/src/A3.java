@@ -18,10 +18,8 @@ public class A3 {
     private static LinkedList<cachedQuery>  cachedQGrid;
     private static LinkedList<cachedQuery>  cachedMDPGrid;
 
-
     public static void main(String args[]) {
-
-
+            
         problem = getGridProblem(args[0]);
         queries = getQueries(args[1]);
 
@@ -41,38 +39,11 @@ public class A3 {
          * Answer Queries
          * **/
 
-        System.out.println("\nPrinting query results\n\n");
+        System.out.println("\n\n\nPRINTING QUERY RESULTS\n---------------------------------------");
         printQueryResults();
 
     }
 
-    public static void printQueryResults(){
-        for(var q : cachedMDPGrid)
-            printQueryAnswers(q);
-
-        for(var q : cachedQGrid)
-            printQueryAnswers(q);
-    }
-
-    public static void cacheQGridForQuery(int iteration, QTile[][] grid){
-
-        for (var query : queries){
-            if(query.method.equals("RL") && query.steps == iteration){
-                System.out.println("Board " +  iteration + " was cached for RL" );
-                cachedQGrid.add(new cachedQuery(query, null, grid));
-            }
-        }
-
-    }
-
-    public static void cacheMDPGridForQuery(int iteration, MDPTile[][] grid){
-        for (var query : queries){
-            if(query.method.equals("MDP") && query.steps == iteration){
-                System.out.println("Board " +  iteration + " was cached for MDP" );
-                cachedMDPGrid.add(new cachedQuery(query, grid, null));
-            }
-        }
-    }
 
     public static void solveQLearning(){
         var grid = constructQLearning();
@@ -301,6 +272,7 @@ public class A3 {
 
     public static tuple computeActionFromValues(int[] location, MDPTile[][] grid){
         double value = Double.NEGATIVE_INFINITY;
+
         Direction action = Direction.NORTH;
         //Take the max value over all actions
         for(var dir : Direction.values()){
@@ -398,14 +370,6 @@ public class A3 {
         return new MDPTile[]{grid[forward[0]][forward[1]], grid[right[0]][right[1]], grid[left[0]][left[1]]};
     }
 
-
-
-    public static void printIntArray(int[] arr){
-        for (var obj : arr){
-            System.out.print(obj + " ");
-        }
-    }
-
     public static boolean isValidMovement(int i, int j, MDPTile[][] grid){
         var valid = true;
         if(i > grid.length-1 || j > grid[0].length-1 || i < 0 || j < 0)
@@ -433,6 +397,31 @@ public class A3 {
         return grid;
     }
 
+    public static void printQueryResults(){
+        for(var q : cachedMDPGrid)
+            printQueryAnswers(q);
+
+        for(var q : cachedQGrid)
+            printQueryAnswers(q);
+    }
+
+    public static void cacheQGridForQuery(int iteration, QTile[][] grid){
+
+        for (var query : queries){
+            if(query.method.equals("RL") && query.steps == iteration){
+                cachedQGrid.add(new cachedQuery(query, null, grid));
+            }
+        }
+
+    }
+
+    public static void cacheMDPGridForQuery(int iteration, MDPTile[][] grid){
+        for (var query : queries){
+            if(query.method.equals("MDP") && query.steps == iteration){
+                cachedMDPGrid.add(new cachedQuery(query, grid, null));
+            }
+        }
+    }
     public static void printTable(Object[][] table){
         var fmt_str = "";
 
@@ -536,6 +525,14 @@ public class A3 {
             e.printStackTrace();
         }
 
+        //--------------------------------------------------------------------------------------------------------------- apply flip to problem
+        for(int[] i : terminalStates)
+            flipCoordinate(i, vertical);
+        for(int[] i : boulderStates)
+            flipCoordinate(i, vertical);
+        flipCoordinate(startState, vertical);
+
+
         Problem grid = new Problem(
                 horizontal,
                 vertical,
@@ -550,6 +547,14 @@ public class A3 {
                 transitionCost);
 
         return grid;
+    }
+
+    public static void flipCoordinate(int[] coord, int height){
+        var temp = coord[0];
+
+        coord[0] = height - 1 - coord[1];
+        coord[1] = temp;
+
     }
 
     public static List<Integer> extractNumbersRegexStyle(String str) {
@@ -578,7 +583,11 @@ public class A3 {
                     int steps = Integer.parseInt(values[2]);;
                     String method = values[3];
                     String query = values[4];
-                    queries.add(new Query(column, row, steps, method, query));
+
+                    //flip row
+                    row = problem.vertical - 1 - row;
+
+                    queries.add(new Query(column, row, steps, method, query, problem.vertical));
                 }
             }
         } catch (FileNotFoundException e) {
@@ -592,18 +601,26 @@ public class A3 {
     public static void printQueryAnswers(cachedQuery cachedQuery){
         if( cachedQuery.query.method.equals("MDP")) {
             if (cachedQuery.query.query.equals("stateValue")) {
+                System.out.println("\nBOARD AT STEP " + cachedQuery.query.steps  + "\n------------------------------\n");
+                printTable(cachedQuery.mdpgrid);
                 System.out.println(cachedQuery.query + " : " + cachedQuery.mdpgrid[cachedQuery.query.row][cachedQuery.query.column].value);
             }
             else if (cachedQuery.query.query.equals("bestPolicy")) {
                 //Compute policy from value using 1 step of minimax
-                System.out.println(cachedQuery.query + " : " + computeActionFromValues(new int[]{cachedQuery.query.row,cachedQuery.query.row}, cachedQuery.mdpgrid).action);
+                System.out.println("\nBOARD AT STEP " + cachedQuery.query.steps  + "\n------------------------------\n");
+                printTable(cachedQuery.mdpgrid);
+                System.out.println("\n"+ cachedQuery.query + " : " + computeActionFromValues(new int[]{cachedQuery.query.row,cachedQuery.query.row}, cachedQuery.mdpgrid).action);
             }
 
         }else{
             if (cachedQuery.query.query.equals("bestQValue")) {
+                System.out.println("\nBOARD AT STEP " + cachedQuery.query.steps  + "\n------------------------------\n");
+                printTableWide(cachedQuery.qgrid);
                 System.out.println(cachedQuery.query + " : " + cachedQuery.qgrid[cachedQuery.query.row][cachedQuery.query.column].value());
             }
             else if (cachedQuery.query.query.equals("bestPolicy")) {
+                System.out.println("\nBOARD AT STEP " + cachedQuery.query.steps  + "\n------------------------------\n");
+                printTableWide(cachedQuery.qgrid);
                 System.out.println(cachedQuery.query + " : " +cachedQuery.qgrid[cachedQuery.query.row][cachedQuery.query.column].getAction());
             }
 
@@ -819,17 +836,18 @@ class Query {
     public int steps;
     public String method;
     public String query;
-
-    public Query(int column, int row, int steps, String method, String query){
+    public int vertical;
+    public Query(int column, int row, int steps, String method, String query, int vertical){
         this.column = column;
         this.row = row;
         this.steps = steps;
         this.method = method;
         this.query = query;
+        this.vertical = vertical;
     }
 
     public String toString(){
-        return column + ", " + row + ", " + steps + ", " + method + ", " + query;
+        return "\n The query is:  " +  column + ", " + (vertical - (row + 1)) + ", " + steps + ", " + method + ", " + query;
     }
 
 }
@@ -844,8 +862,6 @@ class cachedQuery {
         this.mdpgrid = mdpgrid;
         query = q;
     }
-
-
 }
 
 class tuple{
