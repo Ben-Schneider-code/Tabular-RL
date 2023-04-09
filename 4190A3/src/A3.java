@@ -490,10 +490,12 @@ public class A3 {
                         boulderStates.add(arr);
                     }
                 }
-                else if(data.toLowerCase().contains("robotStartState")){
+                else if(data.toLowerCase().contains("robotstartstate")){
                     List<Integer> values = extractNumbersRegexStyle(data);
                     startState[0] = values.get(0);
                     startState[1] = values.get(1);
+
+
                 }
                 else if(data.toLowerCase().contains("k")){
                     String[] parts = data.split("=");
@@ -609,7 +611,7 @@ public class A3 {
                 //Compute policy from value using 1 step of minimax
                 System.out.println("\nBOARD AT STEP " + cachedQuery.query.steps  + "\n------------------------------\n");
                 printTable(cachedQuery.mdpgrid);
-                System.out.println("\n"+ cachedQuery.query + " : " + computeActionFromValues(new int[]{cachedQuery.query.row,cachedQuery.query.row}, cachedQuery.mdpgrid).action);
+                System.out.println("\n"+ cachedQuery.query + " : " + computeActionFromValues(new int[]{cachedQuery.query.row,cachedQuery.query.column}, cachedQuery.mdpgrid).action);
             }
 
         }else{
