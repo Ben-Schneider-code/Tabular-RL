@@ -1,3 +1,11 @@
+/**
+ * Tabular MDP and RL
+ *
+ * The purpose of this assignment is to do MDP learning and Q-learning on a tabular environment.
+ * The configuration of the grid is given in a file, which is passed to the program via the first argument.
+ * The program prints out the state of the program at certain steps during execution based off of queries give in a file as the second argument.
+ * **/
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,12 +17,14 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.Random;
 
+/**
+ * Do MDP and Q-learning on the grid
+ * **/
 public class A3 {
 
     static Random random = new Random();
     private static Problem problem;
     private static LinkedList<Query> queries;
-
     private static LinkedList<cachedQuery>  cachedQGrid;
     private static LinkedList<cachedQuery>  cachedMDPGrid;
 
@@ -44,7 +54,15 @@ public class A3 {
 
     }
 
+    /**
+    * Functions for solving Q-learning
+    * **/
 
+
+    /**
+     * Runs the specified number of episodes of Q-learning.
+     * Caches grid states that will be used to answer queries.
+     * **/
     public static void solveQLearning(){
         var grid = constructQLearning();
 
@@ -57,13 +75,18 @@ public class A3 {
         printTableWide(grid);
     }
 
+    /**
+     * Runs one episode of Q-learning
+     * input: grid at the start of the episode
+     * output: grid at the end of the episode
+     * **/
     public static QTile[][] updateQLearning(QTile[][] oldGrid){
 
         var grid = cpyQGrid(oldGrid);
         var currentState = grid[problem.startState[0]][problem.startState[1]];
 
         while(!currentState.isTerminal){
-            var action = getPolicy(currentState, grid);
+            var action = getPolicy(currentState);
             var newState = transition(action, new int[]{currentState.row, currentState.col}, grid);
             var currValue = getQValue(currentState, action);
 
@@ -78,6 +101,13 @@ public class A3 {
         return grid;
     }
 
+    /**
+     * updates a Q-value of tiles in the grid
+     * input:
+     * the tile being updated,
+     * the action associated with the q-value being updated,
+     * the new Q-value
+     * **/
     public static void updateQValue(QTile tile, Direction dir, double value){
         if(dir == Direction.WEST)
             tile.west = value;
@@ -89,6 +119,14 @@ public class A3 {
             tile.north = value;
     }
 
+    /**
+     * get the Q-value of a tile for a given action
+     * input:
+     * the tile being queried,
+     * the action associated with the q-value,
+     * output:
+     * the Q-value for that state and action
+     * **/
     public static double getQValue(QTile tile, Direction dir){
         if(dir == Direction.WEST)
             return tile.west;
@@ -99,46 +137,75 @@ public class A3 {
         return tile.north;
     }
 
+    /**
+     * Transition state based off current state and an action
+     * input:
+     * the action being done,
+     * the current state,
+     * the grid of states
+     * output:
+     * the new state after doing the action
+     * **/
     public static QTile transition(Direction action, int[] currentState, QTile[][] grid){
         var options = movementSquares(currentState, grid, action);
         double fwdProb = 1-problem.noise;
         double leftProb = fwdProb+ (problem.noise/2);
 
 
-        var r = random.nextDouble();
+        var randomValue = random.nextDouble();
 
-        if(r < fwdProb)
+        if(randomValue < fwdProb)
             return options[0];
-        else if(r < leftProb)
+        else if(randomValue < leftProb)
             return  options[1];
 
         return options[2];
 
     }
 
-    public static Direction getPolicy(QTile currentState, QTile[][] grid){
+    /**
+     * Get the action to based off of the current state.
+     * Does a random action with probability epsilon to encourage exploration
+     * input:
+     * the tile that is the current state,
+     * output:
+     * the action to do based off the policy
+     * **/
+    public static Direction getPolicy(QTile currentState){
         var epsilon = .2;
-        var r = random.nextDouble();
+        var randomValue = random.nextDouble();
 
-        if(r < epsilon)
+        if(randomValue < epsilon)
             return randomMove();
 
         return currentState.getAction();
     }
 
+    /**
+     * Get a random action
+     * output:
+     * a random action
+     * **/
     public static Direction randomMove(){
-        var r = random.nextDouble();
-        if(r < .25)
+        var randomValue = random.nextDouble();
+        if(randomValue < .25)
             return Direction.EAST;
-        if(r<.5)
+        if(randomValue<.5)
             return Direction.NORTH;
-        if(r < .75)
+        if(randomValue < .75)
             return Direction.SOUTH;
 
         return Direction.WEST;
 
     }
 
+    /**
+     * copy the Q-grid
+     * input:
+     * the Q-grid to be copied
+     * output:
+     * a copy of the Q-grid
+     * **/
     public static QTile[][] cpyQGrid(QTile[][] oldGrid){
         var newGrid = new QTile[problem.vertical][problem.horizontal];
 
@@ -148,6 +215,11 @@ public class A3 {
         return newGrid;
     }
 
+    /**
+     * construct the Q-grid
+     * output:
+     * the Q-grid in the initial state
+     * **/
     public static QTile[][] constructQLearning(){
         var grid = new QTile[problem.vertical][problem.horizontal];
 
@@ -166,6 +238,17 @@ public class A3 {
         return grid;
     }
 
+    /**
+     * Calculate the set of Q-tiles possible to transition to based off of the current position
+     * and an action from that position
+     * input:
+     * the current location
+     * the Q-problem grid
+     * the action that is being done
+     * output:
+     * the actions that are possible when doing that action
+     * when in this position on the grid
+     * **/
     public static QTile[] movementSquares(int[] location, QTile[][] grid, Direction direction){
         var forward = new int[2];
         var right = new int[2];
@@ -234,6 +317,14 @@ public class A3 {
         return returnVal;
     }
 
+    /**
+     * check if a tile is obstructed by a boulder or edge of the grid
+     * input:
+     * i: the row of the tile
+     * j: the column of the tile
+     * output:
+     * returns true if the movement is possible, false otherwise
+     * **/
     public static boolean isValidMovement(int i, int j, QTile[][] grid){
         var valid = true;
         if(i > grid.length-1 || j > grid[0].length-1 || i < 0 || j < 0)
@@ -242,9 +333,16 @@ public class A3 {
             valid = false;
         return valid;
     }
+
+
     /**
      *  MDP VALUE INTERATION FUNCTIONS
      *
+     * **/
+
+    /**
+     * Runs the specified number of iterations of MDP learning.
+     * Caches grid states that will be used to answer queries.
      * **/
     public static void solveMDP(){
         var grid = constructMDP();
@@ -259,6 +357,11 @@ public class A3 {
 
     }
 
+    /**
+     * Runs one iteration of MDP learning
+     * input: grid at the start of the iteration
+     * output: grid at the end of the iteration
+     * **/
     public static MDPTile[][] iterateGrid(MDPTile[][] oldGrid){
         var newGrid = constructMDP();
 
@@ -270,10 +373,18 @@ public class A3 {
         return newGrid;
     }
 
+    /**
+     * Compute the expectimax value of an action for a state
+     * input:
+     * the state to take the expectimax of
+     * the problem state
+     * output: an action/state tuple of the highest value action
+     * **/
     public static tuple computeActionFromValues(int[] location, MDPTile[][] grid){
         double value = Double.NEGATIVE_INFINITY;
 
         Direction action = Direction.NORTH;
+
         //Take the max value over all actions
         for(var dir : Direction.values()){
             var moveValue = valueOfMove(location, grid, dir);
@@ -282,13 +393,17 @@ public class A3 {
                 action = dir;
             }
         }
-
-
-        var tup = new tuple(action,value);
-        return tup;
+        return new tuple(action,value);
     }
 
-
+    /**
+     * Compute the value of a move in a given state
+     * input:
+     * the state to get the value of
+     * the action being done
+     * the problem state
+     * output: the value of that action in that state
+     * **/
     public static double valueOfMove(int[] location, MDPTile[][] grid, Direction direction){
         double value = 0;
         double plannedMoveProb = 1.0- problem.noise;
@@ -304,6 +419,18 @@ public class A3 {
         return value;
     }
 
+
+    /**
+     * Calculate the set of MDP-tiles possible to transition to based off of the current position
+     * and an action from that position
+     * input:
+     * the current location
+     * the MDP problem grid
+     * the action that is being done
+     * output:
+     * the actions that are possible when doing that action
+     * when in this position on the grid
+     * **/
     public static MDPTile[] movementSquares(int[] location, MDPTile[][] grid, Direction direction){
         var forward = new int[2];
         var right = new int[2];
@@ -370,6 +497,14 @@ public class A3 {
         return new MDPTile[]{grid[forward[0]][forward[1]], grid[right[0]][right[1]], grid[left[0]][left[1]]};
     }
 
+    /**
+     * check if a tile is obstructed by a boulder or edge of the grid
+     * input:
+     * i: the row of the tile
+     * j: the column of the tile
+     * output:
+     * returns true if the movement is possible, false otherwise
+     * **/
     public static boolean isValidMovement(int i, int j, MDPTile[][] grid){
         var valid = true;
         if(i > grid.length-1 || j > grid[0].length-1 || i < 0 || j < 0)
@@ -379,6 +514,11 @@ public class A3 {
         return valid;
     }
 
+    /**
+     * construct the MDP-grid
+     * output:
+     * the MDP-grid in the initial state
+     * **/
     public static MDPTile[][] constructMDP(){
         var grid = new MDPTile[problem.vertical][problem.horizontal];
 
@@ -397,6 +537,15 @@ public class A3 {
         return grid;
     }
 
+    /**
+    * I/O Functions
+    *
+    **/
+
+
+    /**
+     * Print the answers to every query
+     * **/
     public static void printQueryResults(){
         for(var q : cachedMDPGrid)
             printQueryAnswers(q);
@@ -405,6 +554,12 @@ public class A3 {
             printQueryAnswers(q);
     }
 
+    /**
+     * Cache a grid for an RL query
+     * input:
+     * the step being cached
+     * the problem state
+     * **/
     public static void cacheQGridForQuery(int iteration, QTile[][] grid){
 
         for (var query : queries){
@@ -415,6 +570,12 @@ public class A3 {
 
     }
 
+    /**
+     * Cache a grid for an MDP query
+     * input:
+     * the step being cached
+     * the problem state
+     * **/
     public static void cacheMDPGridForQuery(int iteration, MDPTile[][] grid){
         for (var query : queries){
             if(query.method.equals("MDP") && query.steps == iteration){
@@ -422,28 +583,44 @@ public class A3 {
             }
         }
     }
+
+    /**
+     * Print a table of objects
+     * input:
+     * a table of objects
+     * **/
     public static void printTable(Object[][] table){
-        var fmt_str = "";
+        var formattingStr = "";
 
         for(int i = 0; i < table[0].length;i++)
-            fmt_str += "%15s";
+            formattingStr += "%15s";
 
         for (final Object[] row : table) {
-            System.out.format(fmt_str+"%n", row);
+            System.out.format(formattingStr+"%n", row);
         }
     }
 
+    /**
+     * Print a table of objects with wide formatting
+     * input:
+     * a table of objects
+     * **/
     public static void printTableWide(Object[][] table){
-        var fmt_str = "";
+        var formattingStr = "";
 
         for(int i = 0; i < table[0].length;i++)
-            fmt_str += "%42s";
+            formattingStr += "%42s";
 
         for (final Object[] row : table) {
-            System.out.format(fmt_str+"%n", row);
+            System.out.format(formattingStr+"%n", row);
         }
     }
 
+    /**
+     * Read in the grid problem from a file
+     * input:
+     * filepath as a string
+     * **/
     public static Problem getGridProblem(String fileName){
 
         int horizontal = Integer.MAX_VALUE;
@@ -527,7 +704,7 @@ public class A3 {
             e.printStackTrace();
         }
 
-        //--------------------------------------------------------------------------------------------------------------- apply flip to problem
+        //-------------------- apply flip to problem
         for(int[] i : terminalStates)
             flipCoordinate(i, vertical);
         for(int[] i : boulderStates)
@@ -535,7 +712,7 @@ public class A3 {
         flipCoordinate(startState, vertical);
 
 
-        Problem grid = new Problem(
+        Problem problemFromFile = new Problem(
                 horizontal,
                 vertical,
                 terminalStates,
@@ -548,17 +725,25 @@ public class A3 {
                 noise,
                 transitionCost);
 
-        return grid;
+        return problemFromFile;
     }
 
+    /**
+     * Flip an index about the axis
+     * **/
     public static void flipCoordinate(int[] coord, int height){
-        var temp = coord[0];
+        var tempValue = coord[0];
 
         coord[0] = height - 1 - coord[1];
-        coord[1] = temp;
+        coord[1] = tempValue;
 
     }
 
+    /**
+     * Extract values from file using regex
+     * input:
+     * regex to match
+     * **/
     public static List<Integer> extractNumbersRegexStyle(String str) {
         List<String> arr = new ArrayList<>();
         Pattern p = Pattern.compile("-?\\d+");
@@ -571,6 +756,10 @@ public class A3 {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Read in the queries from file
+     * input: filepath as string
+     * **/
     public static LinkedList<Query> getQueries(String fileName){
         LinkedList<Query> queries = new LinkedList<Query>();
         try {
@@ -600,6 +789,10 @@ public class A3 {
         return queries;
     }
 
+    /**
+     * Print answers to query
+     * input: the query information that has been cached
+     * **/
     public static void printQueryAnswers(cachedQuery cachedQuery){
         if( cachedQuery.query.method.equals("MDP")) {
             if (cachedQuery.query.query.equals("stateValue")) {
@@ -631,6 +824,7 @@ public class A3 {
 
 }
 
+//A class representing a Q-tile
 class QTile{
 
     static Random random = new Random();
@@ -662,6 +856,7 @@ class QTile{
         this.col = col;
     }
 
+    //return a copy of this file
     public QTile cpy(){
         var newTile = new QTile(reward,row,col);
         newTile.south=south;
@@ -674,6 +869,7 @@ class QTile{
         return newTile;
     }
 
+    //return the value of this tile
     public double value(){
         if(isTerminal)
             return terminalValue;
@@ -689,6 +885,8 @@ class QTile{
         return val;
     }
 
+    //get the best action for this tile
+    //randomly break ties
     public Direction getAction(){
         var actionList = new LinkedList<Direction>();
 
@@ -724,6 +922,7 @@ class QTile{
         return actionList.get(index);
     }
 
+    //return a string representation of this tile
     public String toString(){
         var n = String.format("%.2f",north);
         var e = String.format("%.2f",east);
@@ -741,6 +940,8 @@ class QTile{
     }
 
 }
+
+//a class representing a state in the MDP
 class MDPTile{
     double value;
     double reward;
@@ -759,6 +960,7 @@ class MDPTile{
         this.col = col;
     }
 
+    //return a string representation of this state
     public String toString(){
         String str = String.format("%.2f",value);
 
@@ -773,6 +975,8 @@ class MDPTile{
 
 }
 
+// a class representing the problem
+// holds all the information from the configuration
 class Problem {
 
     public int horizontal;
@@ -813,10 +1017,12 @@ class Problem {
         this.transitionCost = transitionCost;
     }
 
+    //a string representation of the problem
     public String toString(){
         return "Horizontal: "+ horizontal + "\n"+"Vertical: "+ + vertical + "\n" + "Terminal states: "+ listToString(terminalStates) + "\n" + "Boulder states: " + listToString(boulderStates) + "\n" + "Start state: " + "[" + startState[0] + " " + startState[1] + "]\n" + "k: " +  k + "\n" + "episodes: " + episodes + "\n" + "discount: " + discount + "\n" + "alpha: "+  alpha + "\n" + "noise: " +  noise + "\n" + "transition cost: " + transitionCost;
     }
 
+    //write list as string
     private String listToString(LinkedList<int[]> list){
         String result = "[";
         for(int[] arr : list){
@@ -831,6 +1037,7 @@ class Problem {
 
 }
 
+//a class representing a query to answer about the grid
 class Query {
 
     public int column; //h - horizontal
@@ -848,12 +1055,15 @@ class Query {
         this.vertical = vertical;
     }
 
+    //string representation of the query
     public String toString(){
         return "\n The query is:  " +  column + ", " + (vertical - (row + 1)) + ", " + steps + ", " + method + ", " + query;
     }
 
 }
 
+//a query that has been cached with a board state
+// allows for easy answering of queries at the end of runtime
 class cachedQuery {
     public QTile[][] qgrid;
     public MDPTile[][] mdpgrid;
@@ -866,6 +1076,7 @@ class cachedQuery {
     }
 }
 
+// an action and value tuple
 class tuple{
     Direction action;
     double value;
@@ -875,11 +1086,13 @@ class tuple{
         this.value = value;
     }
 
+    //string representation of the tuple
     public String toString(){
         return "Direction : " + action + "  value: " + value;
     }
 }
 
+//Enum of all possible actions
 enum Direction {
     NORTH,
     EAST,
