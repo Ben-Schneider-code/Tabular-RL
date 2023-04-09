@@ -774,8 +774,8 @@ public class A3 {
                 String[] values = data.split(",");
                 if(values.length == 5){
                     int column = Integer.parseInt(values[0]);
-                    int row = Integer.parseInt(values[1]);;
-                    int steps = Integer.parseInt(values[2]);;
+                    int row = Integer.parseInt(values[1]);
+                    int steps = Integer.parseInt(values[2]);
                     String method = values[3];
                     String query = values[4];
 
