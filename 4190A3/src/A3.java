@@ -28,6 +28,10 @@ public class A3 {
     private static LinkedList<cachedQuery>  cachedQGrid;
     private static LinkedList<cachedQuery>  cachedMDPGrid;
 
+    /**
+     * Reads in the problem and run Q-learning and MDP
+     * then prints results
+     * **/
     public static void main(String args[]) {
             
         problem = getGridProblem(args[0]);
