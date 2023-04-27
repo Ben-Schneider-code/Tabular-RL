@@ -1,1 +1,0 @@
-execute with java A3 gridConf.txt results.txt

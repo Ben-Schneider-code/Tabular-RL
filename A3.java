@@ -1,9 +1,5 @@
 /**
  * Tabular MDP and RL
- *
- * The purpose of this assignment is to do MDP learning and Q-learning on a tabular environment.
- * The configuration of the grid is given in a file, which is passed to the program via the first argument.
- * The program prints out the state of the program at certain steps during execution based off of queries give in a file as the second argument.
  * **/
 
 import java.util.ArrayList;
@@ -33,7 +29,7 @@ public class A3 {
      * then prints results
      * **/
     public static void main(String args[]) {
-            
+
         problem = getGridProblem(args[0]);
         queries = getQueries(args[1]);
 
